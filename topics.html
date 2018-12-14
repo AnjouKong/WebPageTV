@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="Content-type" content="text/html; charset=utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width,user-scalable=yes,minimum-scale=1,maximum-scale=1">
+    <title>专题</title>
+    <link rel="stylesheet" type="text/css" href="css/main.css?v=3" media="all">
+    <link rel="stylesheet" type="text/css" href="css/load.css" media="all">
+    <script type="text/javascript" src="js/jquery-1.11.3.min.js"></script>
+    <script type="text/javascript" src="js/common.js"></script>
+    <script type="text/javascript" src="js/Cursor.js"></script>
+</head>
+<body>
+<div class="topicsPage j-table section" data-nth="0" data-focus=",,,">
+    <ul class="topicsList j-tr">
+        <!-- <li>
+            <div>
+                <img src="images/duolaameng.jpg" /><span></span>
+            </div>
+            <p>蜘蛛侠</p>
+        </li> -->
+    </ul>
+</div>
+<div class="error section">
+    <img src="images/error.png" width="169px" />
+    <p></p>
+</div>
+<div class="sk-circle">
+    <div class="sk-circle1 sk-child"></div>
+    <div class="sk-circle2 sk-child"></div>
+    <div class="sk-circle3 sk-child"></div>
+    <div class="sk-circle4 sk-child"></div>
+    <div class="sk-circle5 sk-child"></div>
+    <div class="sk-circle6 sk-child"></div>
+    <div class="sk-circle7 sk-child"></div>
+    <div class="sk-circle8 sk-child"></div>
+    <div class="sk-circle9 sk-child"></div>
+    <div class="sk-circle10 sk-child"></div>
+    <div class="sk-circle11 sk-child"></div>
+    <div class="sk-circle12 sk-child"></div>
+</div>
+<script>
+    var api_version = 'v2';
+    var pageType = getQueryString('pageType');
+    var api_base = '';
+    if (pageType == 'web') {
+        api_base = 'http://192.168.16.115:2100/service-ui';
+    } else {
+        var apiHost = window.rnUtils.getHostUrl();
+        api_base = apiHost + '/service-ui';
+    }
+
+    var code;
+    $(function(){
+        //1920*1080,1366*768,1280*720,960*540,640*360
+        //2560*1440,3840*2160,
+        var ww = $(window).width();
+        var wh = $(window).height()
+        var rate = ww/1920;
+        var height = ww>1920 ? wh : 1080;
+        if (ww/wh == 1.6) {
+            // 适配1280*800
+            height = 1200;
+        }
+        $('.section').css({
+            "transform":"scale("+rate+")",
+            "transform-origin": "0 0",
+            "height": height + "px",
+        });
+
+        $(document).keydown(function(e){
+            code = e.keyCode;
+        });
+
+        var xhr = new XMLHttpRequest();
+        xhr.timeout = 10000;
+        xhr.ontimeout = function (event) {
+
+        }
+        xhr.open('POST', api_base +'/api/vod/subject/'+ api_version);
+        xhr.setRequestHeader('token', getQueryString('token'));
+        // xhr.send('XBkOh7kVNRZNE2ssn8D');
+        xhr.send(getQueryString('subjectId'));
+        xhr.onreadystatechange = function () {
+            if (xhr.readyState == 4 && xhr.status == 200) {
+                var data = JSON.parse(xhr.responseText);
+                $(".topicsPage").find(".sk-circle").remove();
+                if(data.head.code == "200"){
+                    // 加载专题背景海报
+                    Imagess(data.body.backgroundImage, function(){
+                        $(".topicsPage").css("background-image","url("+data.body.backgroundImage+")");
+                    });
+                    var imgList = data.body.mediaList;
+                    var _html = '';
+                    for(var i=0; i<imgList.length; i++){
+                        _html += "<li class='j-td' data-mediaid='"+imgList[i].mediaId+"'>"+
+                                    "<div class='topicImg'><img onerror='showErrorImg(this,3);' src='"+imgList[i].backgroundImage+"' /></div>"+
+                                    "<div class='topicTitle'><p>"+imgList[i].mediaName+"</p></div>"+
+                                 "</li>";
+                    };
+                    $(".topicsList").append(_html);
+
+                    var left_num = 1;
+                    var cursor = Cursor({
+                        wrap: 'body',
+                        table: 'j-table',
+                        tr: 'j-tr',
+                        td: 'j-td',
+                        init: [0,0,0],
+                        keydownFn: function(dom){
+
+                            var indexLi = dom.index();
+                            var $List = $(".topicsList");
+                            var left = $List.css('left');
+                            var list_num = $(".topicsList li").length;
+
+                            // 向右
+                            if(code == 39){
+                                if(indexLi > 6 && left_num <list_num-7){
+                                    left_num = left_num + 1;
+                                    $List.css("left","-"+(left_num)*255+"px");
+                                }
+                            }
+                            // 向左
+                            if(code == 37){
+                                if (indexLi < left_num && left_num > 0) {
+                                    left_num = left_num -1;
+                                    $List.css("left","-"+(left_num)*255+"px");
+                                }
+                            }
+
+                            // OK
+                            if(code == 13){
+                                console.log(dom.data('mediaid'));
+                                window.rnUtils.goToVodDetail(dom.data('mediaid'));
+                            }
+                        }
+                    });
+                }else{
+                    $(".error").show();
+                    $(".error p").text("抱歉，网络加载失败！");
+                }
+            } else if (xhr.readyState == 3) {
+                $(".topicsPage").append($("body > .sk-circle").clone());
+            } else {
+                // alert(xhr.statusText);
+            }
+        }
+
+        var topicsList = {
+            "topics": "热门",
+            "bg":"images/bg.jpg",
+            "data": [
+                {
+                    "name":"1",
+                    "url":"images/duolaameng.jpg"
+                },{
+                    "name":"2",
+                    "url":"images/duolaameng.jpg"
+                },{
+                    "name":"3",
+                    "url":"images/duolaameng.jpg"
+                },{
+                    "name":"4",
+                    "url":"images/duolaameng.jpg"
+                },{
+                    "name":"5",
+                    "url":"images/duolaameng.jpg"
+                },{
+                    "name":"6",
+                    "url":"images/duolaameng.jpg"
+                },{
+                    "name":"7",
+                    "url":"images/duolaameng.jpg"
+                },{
+                    "name":"8",
+                    "url":"images/duolaameng.jpg"
+                },{
+                    "name":"9",
+                    "url":"images/duolaameng.jpg"
+                },{
+                    "name":"10",
+                    "url":"images/duolaameng.jpg"
+                },{
+                    "name":"11",
+                    "url":"images/duolaameng.jpg"
+                },{
+                    "name":"12",
+                    "url":"images/duolaameng.jpg"
+                },{
+                    "name":"13",
+                    "url":"images/duolaameng.jpg"
+                }
+            ]
+        }
+    });
+</script>
+</body>
+</html>

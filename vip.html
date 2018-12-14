@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="Content-type" content="text/html; charset=utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width,user-scalable=yes,minimum-scale=1,maximum-scale=1">
+    <title>VIP购买</title>
+    <link rel="stylesheet" type="text/css" href="css/main.css?v=1" media="all">
+    <script type="text/javascript" src="js/jquery-1.11.3.min.js"></script>
+    <script type="text/javascript" src="js/common.js"></script>
+    <!-- <script type="text/javascript" src="js/Cursor.js"></script> -->
+    <script type="text/javascript" src="js/qrcode.js"></script>
+    <style type="text/css">
+        .loading{ width: 100%; height: 100%; background: #000; position: absolute; left: 0; top: 0; display: none;}
+        .sk-circle{ width: 160px; height: 160px; position: absolute; top: 50%; left: 50%; margin: -80px 0 0 -80px; display: none;}
+        /*.vipPage.duanwu{background-image: url("images/bg11.jpg?v=1");background-size: cover;}*/
+    </style>
+</head>
+<body>
+<div class="vipPage d11 section">
+    <div class="leftPart">
+        <div class="vipLead"><img src="images/d11/vip_lead.png"></div>
+        <div class="priceList"></div>
+        <div class="vipRight"><img src="images/d11/vip_right2.png"></div>
+    </div>
+    <div class="rightPart">
+        <div class="content">
+            <!-- <img src="images/code2.png" /> -->
+            <div class="qrcode"></div>
+            <div class="prompt">
+                <img src="images/alipay.png" width="43px" />
+                <img src="images/wechat.png?v=1" width="43px" />
+                <p>请使用支付宝、微信扫码付款</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="vipPage-single section">
+    <div class="colL">
+        <div class="h2-ttl">购买详情</div>
+        <!-- <div class="movie-pic">
+            <img src="images/duolaameng.jpg" alt="" width="350" height="528">
+            <div class="title">哆啦A梦</div>
+        </div>
+        <div class="price-desc clear-fix">
+            <div class="left">有效期<span class="time">12</span>小时</div>
+            <div class="right">会员价<span class="price">18</span>元</div>
+        </div> -->
+    </div>
+    <div class="colR">
+        <div class="h2-ttl">扫码完成购买<span>有效期内不限次观看</span></div>
+        <div class="codeBox">
+            <div class="inner">
+                <div class="qrcode-single"></div>
+                <div class="mark">按<span>OK</span>键<br>刷新二维码</div>
+                <div class="prompt">
+                    <img src="images/alipay.png" width="49px" />
+                    <img src="images/wechat.png?v=1" width="49px" />
+                    <span>请使用支付宝、微信扫码付款</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="vip-right"><img src="images/vip_right2.png" alt=""></div>
+</div>
+
+<div class="loading">
+    <div class="sk-circle">
+        <div class="sk-circle1 sk-child"></div>
+        <div class="sk-circle2 sk-child"></div>
+        <div class="sk-circle3 sk-child"></div>
+        <div class="sk-circle4 sk-child"></div>
+        <div class="sk-circle5 sk-child"></div>
+        <div class="sk-circle6 sk-child"></div>
+        <div class="sk-circle7 sk-child"></div>
+        <div class="sk-circle8 sk-child"></div>
+        <div class="sk-circle9 sk-child"></div>
+        <div class="sk-circle10 sk-child"></div>
+        <div class="sk-circle11 sk-child"></div>
+        <div class="sk-circle12 sk-child"></div>
+    </div>
+</div>
+
+<script>
+    var pageType = getQueryString('pageType');
+    var api_base = '';
+    var api_base_meida = '';
+    var api_base_log = '';
+    var apiHost;
+    if (pageType == 'web') {
+        apiHost = 'http://demo.unitedview.cn:2200';
+        api_base = 'http://192.168.16.115:2100/service-pay';
+        api_base = '';
+        api_base_log = '';
+    } else if (pageType == 'demo') {
+        apiHost = 'http://demo.unitedview.cn:2200';
+        api_base = 'http://demo.unitedview.cn:2200' + '/service-pay';
+        api_base_meida = 'http://demo.unitedview.cn:2200' + '/service-media';
+        api_base_log = 'http://demo.unitedview.cn:2200' + '/service-log';
+    } else if (pageType == 'dev') {
+        apiHost = 'http://192.168.16.115:2100';
+        api_base = 'http://192.168.16.115:2100' + '/service-pay';
+        api_base_meida = 'http://192.168.16.115:2100' + '/service-media';
+        api_base_log = 'http://192.168.16.115:2100' + '/service-log';
+    } else {
+        apiHost = window.rnUtils.getHostUrl();
+        api_base = apiHost + '/service-pay';
+        api_base_meida = apiHost + '/service-media';
+        api_base_log = apiHost + '/service-log';
+    }
+
+    getExceptionMessage('page start');
+
+    var token = getQueryString('token');
+    var mediaId = getQueryString('mediaId');
+    var hearBeat; // 订单状态
+    var qtime; // 二维码有效期
+    var qrcodeTime = 300; // 二维码失效时间
+    var keyCode;
+    var order_seriesId,order_seriesName,order_charge,order_orderNo;
+
+    var StartTime = new Date().getTime();
+
+    $(document).keydown(function(e){
+        keyCode = e.keyCode;
+        if (keyCode == 13 && qrcodeTime <= 0) {
+            $('.codeBox .mark').hide();
+            if (order_seriesId && order_seriesName && order_charge) {
+                launchOrder(order_seriesId, order_seriesName, 'media', 1, order_charge);
+
+                // 二维码失效，日志上报
+                var param = {};
+                param.startTime = formatTime(StartTime, 'yyyy-MM-ddTHH:mm:ss.msZ');
+                param.endTime = formatTime(new Date().getTime(), 'yyyy-MM-ddTHH:mm:ss.msZ');
+                param.resourceId = mediaId;
+                param.resourceName = order_seriesName;
+                param.eventEnum = 'ORDER_QR_CODE_EXPIRED_EVENT';
+                param.eventDescribe = {
+                    currentType: 'ORDER_ID',
+                    currentId: order_orderNo
+                };
+                param.eventDescribe = JSON.stringify(param.eventDescribe);
+                logReport('event', '[' + JSON.stringify(param)+ ']');
+            }
+        }
+    });
+
+    $(function(){
+        var buyType = getQueryString('buyType');
+        var theme = getQueryString('theme');
+
+        hideLoading();
+
+        if(buyType == 'single'){
+            $('.vipPage-single').show();
+            if (theme == 'penta') { // 金色主题使用暗红色背景
+                $('.vipPage-single').addClass('red');
+            }
+            getMediaDetail();
+        } else {
+            $('.vipPage').show();
+
+            getExceptionMessage('start query api: /api/pay/check/v3');
+
+            // 从lanucher进入套餐页，先进行一次鉴权查询，如果已经是VIP，则不展示二维码
+            $.ajax({
+                type: 'post',
+                url: api_base +'/api/pay/check/v3',
+                headers: {"token": token},
+                timeout: 10000,
+                data: {},
+                beforeSend: function () {
+                },
+                success: function(data) {
+                    getExceptionMessage('success: /api/pay/check/v3');
+                    // setTimeout(function(){
+                        // $('.loading').fadeOut();
+                    // },100);
+                    // setTimeout(function(){
+                    //     hideLoading();
+                    // },500);
+
+                    if (data && data.head) {
+                        if (data.head.code == 200) {
+                            // 已购买VIP
+                            vipInit(true, data.body.effectTime);
+                        } else {
+                            vipInit(false);
+                        }
+                    } else {
+                        vipInit(false);
+                    }
+                },
+                error: function(err) {
+                    getExceptionMessage('err: /api/pay/check/v3');
+                    // setTimeout(function(){
+                        // $('.loading').fadeOut();
+                    // },100);
+                    // setTimeout(function(){
+                    //     hideLoading();
+                    // },500);
+
+                    vipInit(false);
+                }
+            });
+        }
+
+        //1920*1080,1366*768,1280*720,960*540,640*360
+        //2560*1440,3840*2160,
+        var ww = $(window).width();
+        var wh = $(window).height()
+        var rate = ww/1920;
+        var height = ww>1920 ? wh : 1080;
+        if (ww/wh == 1.6) {
+            // 适配1280*800
+            height = 1200;
+
+            $('.vipPage').css({
+                "padding-top": "320px",
+            });
+            $('.vipPage-single').css({
+                "padding-top": "200px",
+            });
+            $('.vip-right').css({
+                "padding-top": "120px",
+            });
+        }
+        $('.section').css({
+            "transform":"scale("+rate+")",
+            "transform-origin": "0 0",
+            "height": height + "px",
+        });
+
+    });
+
+    function vipInit(isVip, endtime) {
+        if (isVip) {
+            $(".rightPart").empty().addClass('isVip');
+
+            var effectTxt = '';
+            if (endtime) { // 1528804603000
+                var effectTimeTxt = timestampToTime(endtime);
+                effectTxt = '到期时间为：<br>' + effectTimeTxt;
+            }
+
+            $(".rightPart").append('<p class="viptxt">您正享用VIP包天特权<br>'+effectTxt+'</p>');
+        } else {
+            var vHost = 'http://api.cloud.unitedview.cn';
+            var qrUrl = vHost + '/web-webpay/index.html?token='+token;
+            if (mediaId) {
+                qrUrl = vHost + '/web-webpay/index.html?token='+token+'&mediaId='+mediaId;
+            }
+            $(".qrcode").mycode({
+                render: "table",
+                ecLevel: "L",
+                label: '',
+                size: 435,
+                minVersion: 6,
+                fill: "#000",
+                background: "#fff",
+                quiet: 1,
+                text: qrUrl
+            });
+        }
+
+        getPrice(isVip);
+    }
+
+    // 日志上报 type: event,error
+    function logReport(type, param) {
+        console.log(param);
+        window.rnUtils.insertLog(type, param);
+        // token = '0000c9851ea2e0cd37749a75613d372f158d1b15';
+        // var param = {};
+        //     param.StartTime = StartTime;
+        //     param.EndTime = new Date().getTime();
+        //     param.mediaId = mediaId;
+        //     param.EventEnum = 'ORDER_QR_CODE_EXPIRED_EVENT';
+        //     param.EventDescribe = {
+        //         sourceType: 'a',
+        //         currentType: 'PAY_DETAIL',
+        //         currentId: "a",
+        //         currentDesc: "奇门遁甲",
+        //         destType: "201805132138080650",
+        //     };
+
+        // $.ajax({
+        //     type: 'post',
+        //     url: api_base_log +'/api/log/device/event/push/v2',
+        //     headers: {"token": token},
+        //     timeout: 10000,
+        //     data: {
+        //         data: '0wHw0lt7ImFwcCI6ImNvbS51bml0ZWR2aWV3LnBoZW5peC5sb2dzZXJ2aWNlIiwiZXZlbnREZXNjcmliZSI6IntcImxvZ1wiOnRydWUsXCJydWxlXCI6e1wibGltaXRcIjotMSxcImxlXCI6MTAsXCJpbnRlcnZhbFwiOjEsXCJ0eXBlXCI6XCJyZWFsLXRpbWVcIn19IiwiZXZlbnRFbnVtIjoiR0VUX0xPR19SVUxFX0ZBSUxFRCIsInN0YXJ0VGltZSI6IjE1Mjg0NDQxNTY1NTAifV0='
+        //     },
+        //     // data: JSON.stringify(param),
+        //     beforeSend: function () {
+        //     },
+        //     success: function(data) {
+        //     },
+        //     error: function(err) {
+        //     }
+        // });
+    }
+
+    function checkOrder(){
+        // token = 'dd7aaf6ac0ab70731942c27f4e2485dfa82559f3';
+        var param = {};
+        if (mediaId) {
+            param.mediaId = mediaId;
+        }
+        $.ajax({
+            type: 'post',
+            url: api_base +'/api/pay/check/v3',
+            headers: {"token": token},
+            timeout: 10000,
+            data: param,
+            beforeSend: function () {
+            },
+            success: function(data) {
+                if (data && data.head) {
+                    if (data.head.code == 200) {
+                        window.clearInterval(hearBeat);
+                        window.clearInterval(qtime);
+                        // todo
+                        window.rnUtils.checkSuccess();
+                    }
+                }
+            },
+            error: function(err) {
+
+            }
+        });
+    }
+
+    function timer(){
+        qrcodeTime--;
+        if(qrcodeTime==0) {
+            $('.codeBox .mark').show();
+            window.clearInterval(qtime);
+            window.clearInterval(hearBeat);
+        }
+    }
+
+    // 获取媒资信息
+    function getMediaDetail() {
+        var seriesId = mediaId;
+            // seriesId = '1126560';
+
+        // 日志上报-单片支付页进入
+        var param = {};
+        param.startTime = formatTime(StartTime, 'yyyy-MM-ddTHH:mm:ss.msZ');
+        param.endTime = formatTime(new Date().getTime(), 'yyyy-MM-ddTHH:mm:ss.msZ');
+        param.resourceId = mediaId;
+        param.eventEnum = 'ORDER_PAGE_OPEN_VIDEO_ENEVT';
+
+        $.ajax({
+            type: 'get',
+            url: api_base_meida +'/api/media/details/v1/' + seriesId,
+            headers: {"token": token},
+            timeout: 10000,
+            beforeSend: function () {
+            },
+            success: function(data) {
+                // setTimeout(function(){
+                    // $('.loading').fadeOut();
+                // },100);
+                // setTimeout(function(){
+                //     hideLoading();
+                // },500);
+
+                if (data && data.body) {
+                    var res = data.body;
+                    var mediaInfoDom = '<div class="movie-pic">'+
+                    '<img src="'+ res.pictureUrl +'" alt="" width="350" height="528">'+
+                        '<div class="title">'+ res.seriesName +'</div>'+
+                    '</div>'+
+                    '<div class="price-desc clear-fix">'+
+                        '<div class="left">有效期<span class="time">'+ res.validityPeriod +'</span>小时</div>'+
+                        '<div class="right">会员价<span class="price">'+ res.charge +'</span>元</div>'+
+                    '</div>';
+                    $('.vipPage-single .colL').append(mediaInfoDom);
+
+                    order_seriesId = res.seriesId;
+                    order_seriesName = res.seriesName;
+                    order_charge = res.charge;
+
+                    // 下单
+                    launchOrder(res.seriesId, res.seriesName, 'media', 1, res.charge);
+
+                    // 日志上报
+                    param.resourceName = order_seriesName;
+                    param.eventDescribe = 'getMediaDetailSuccess';
+                    logReport('event', '[' + JSON.stringify(param)+ ']');
+                } else {
+                    // 日志上报
+                    param.resourceName = 'error';
+                    param.eventDescribe = 'getMediaDetailError';
+                    logReport('event', '[' + JSON.stringify(param)+ ']');
+                }
+            },
+            error: function(err) {
+                // setTimeout(function(){
+                    // $('.loading').fadeOut();
+                // },100);
+                // setTimeout(function(){
+                //     hideLoading();
+                // },500);
+
+                // 日志上报
+                param.resourceName = 'error';
+                param.eventDescribe = 'getMediaDetailError';
+                logReport('event', '[' + JSON.stringify(param)+ ']');
+            }
+        });
+    }
+
+    // 单片购买下单
+    function launchOrder(goodId, goodName, goodType, goodsNum, price) {
+        var param = {};
+        var orderGoodInfo = {};
+        param.body = 'string';
+        param.orderGoodsList = [];
+
+        orderGoodInfo.goodId = goodId;
+        orderGoodInfo.goodName = goodName;
+        orderGoodInfo.goodType = goodType;
+        orderGoodInfo.goodsNum = goodsNum;
+        orderGoodInfo.price = price;
+
+        param.orderGoodsList.push(orderGoodInfo);
+
+        param.payType = 'aliPay_wxPay';
+        param.price = price;
+        param.subject = goodName;
+        param.transactionType = 'string';
+
+        // 日志上报-下单
+        var logparam = {};
+        logparam.startTime = formatTime(new Date().getTime(), 'yyyy-MM-ddTHH:mm:ss.msZ');
+        logparam.endTime = formatTime(new Date().getTime(), 'yyyy-MM-ddTHH:mm:ss.msZ');
+        logparam.resourceId = mediaId;
+        logparam.eventEnum = 'ORDER_PAGE_ORDER_FETCH_EVENT';
+
+        // token = 'dd7aaf6ac0ab70731942c27f4e2485dfa82559f3';
+
+        $.ajax({
+            type: 'post',
+            url: api_base +'/api/pay/launchOrder/v2',
+            headers: {
+                "token": token,
+                "Content-Type": "application/json;charset=utf-8",
+            },
+            timeout: 10000,
+            data: JSON.stringify(param),
+            beforeSend: function () {
+            },
+            success: function(data) {
+                if (data && data.body) {
+
+                    var $a = document.createElement('A');
+                    $a.href = data.body.toQrPay;
+
+                    $(".qrcode-single").mycode({
+                        render: "table",
+                        ecLevel: "L",
+                        label: '',
+                        size: 550,
+                        minVersion: 6,
+                        fill: "#000",
+                        background: "#fff",
+                        quiet: 2,
+                        text: $a.origin + '/service-pay/api/pay/qrPay/' + data.body.orderNo
+                    });
+
+                    order_orderNo = data.body.orderNo;
+
+                    // 查询订单状态
+                    hearBeat = setInterval(checkOrder, 5000);
+
+                    // 倒计时二维码有效期
+                    qrcodeTime = 300;
+                    qtime = setInterval(timer, 1000);
+
+                    // 日志上报--下单成功
+                    logparam.resourceName = order_orderNo;
+                    logparam.eventDescribe = 'OrderFetchSuccess';
+                    logReport('event', '[' + JSON.stringify(logparam)+ ']');
+                } else {
+                    // 日志上报--下单失败
+                    logparam.resourceName = order_orderNo;
+                    logparam.eventDescribe = 'OrderFetchError';
+                    logReport('event', '[' + JSON.stringify(logparam)+ ']');
+                }
+            },
+            error: function(err) {
+                // 日志上报--下单失败
+                logparam.resourceName = 'error';
+                logparam.eventDescribe = 'OrderFetchError';
+                logReport('event', '[' + JSON.stringify(logparam)+ ']');
+            }
+        });
+    }
+
+    // 获取套餐价格
+    function getPrice(isVip) {
+        getExceptionMessage('start: getPrice');
+
+        // 日志上报-套餐支付页进入
+        var param = {};
+        param.startTime = formatTime(StartTime, 'yyyy-MM-ddTHH:mm:ss.msZ');
+        param.endTime = formatTime(new Date().getTime(), 'yyyy-MM-ddTHH:mm:ss.msZ');
+        param.resourceId = mediaId ? mediaId : 'null';
+        param.resourceName = 'package';
+        if (isVip) {
+            param.eventEnum = 'ORDER_PAGE_OPEN_BOUGHT_ENEVT';
+        } else {
+            param.eventEnum = mediaId ? 'ORDER_PAGE_OPEN_MIXED_ENEVT' : 'ORDER_PAGE_OPEN_PACKAGE_ENEVT';
+        }
+
+        $.ajax({
+            type: 'post',
+            url: api_base +'/api/pay/order/v3',
+            headers: {"token": token},
+            timeout: 10000,
+            data: {"mediaId": mediaId},
+            beforeSend: function () {
+            },
+            success: function(data) {
+                getExceptionMessage('success: getPrice --- /api/pay/order/v3');
+                // data = {
+                //         "head": {
+                //             "code": 200,
+                //             "msg": "成功",
+                //             "bodyType": null
+                //         },
+                //         "body": {
+                //             "orderNo": null,
+                //             "payType": null,
+                //             "pic": "http://phenix-attr-test1.oss-cn-beijing.aliyuncs.com/201806/B523693740_157849.png",
+                //             "tenantName": "展会专用商户",
+                //             "roomId": "1009",
+                //             "note": "第一条 产品名称、商标、型号、数量、金额，交（提）货时间",
+                //             "goods": [
+                //                 {
+                //                     "goodType": "TPackage",
+                //                     "goodId": "wyDHNnXvJdyxbgjknjQ",
+                //                     "goodName": "包天",
+                //                     "isRecommend": "1",
+                //                     "price": 0.01,
+                //                     "originalPrice": 20,
+                //                     "time": 86400000
+                //                 },
+                //                 {
+                //                     "goodType": "TPackage",
+                //                     "goodId": "iX6Hw8W0zdEwcSzezUl",
+                //                     "goodName": "3天包",
+                //                     "isRecommend": "0",
+                //                     "price": 0.01,
+                //                     "originalPrice": 20,
+                //                     "time": 259200000
+                //                 },
+                //                 {
+                //                     "goodType": "media",
+                //                     "goodId": "12547134",
+                //                     "goodName": "父子雄兵",
+                //                     "isRecommend": null,
+                //                     "price": 0.01,
+                //                     "originalPrice": 1,
+                //                     "time": 43200000
+                //                 }
+                //             ]
+                //         }
+                //     };
+
+                if (data && data.body && data.body.goods) {
+
+                    var _goods = data.body.goods.sort(compare("goodType"));
+                    console.log(_goods);
+                    var priceDom = '';
+                    for(var i=0; i<_goods.length; i++){
+                        var price_length = _goods.length;
+                        if (i == 3) break; // 目前价格列表只支持3个
+                        var isTPackage = _goods[i].goodType == 'TPackage';
+                        var recommend = _goods[i].isRecommend == 1 ? 'recommend' : '';
+                        var only = isTPackage ? '' : 'only';
+                        var classname2 = price_length == 3 ? 'three' : 'two';
+                        var recommend_img = _goods[i].isRecommend == 1 ? '<img class="recommend" src="images/recommend.png" width="135px" />' : '';
+                        var vip_icon = isTPackage ? '<img src="images/vip.png" height="61px" />' :
+                            '<img src="images/vip2.png" width="50px" height="50px" style="margin-top: 7px;" />';
+                        var vip_title = isTPackage ? _goods[i].goodName : '购买单片';
+                        var vip_time = isTPackage ? '' : '<span>（'+ _goods[i].time/3600/1000 +'小时有效）</span>';
+                        var vip_desc = isTPackage ? '全场影片免费看' : '购买《'+ _goods[i].goodName +'》';
+
+                        priceDom += '<div class="priceItem '+ recommend +' '+ only +' '+ classname2 +'">'+
+                            recommend_img +
+                            '<div class="price">'+
+                                '<h3><span>￥</span>'+_goods[i].price+'</h3>'+
+                                '<p>原价￥'+_goods[i].originalPrice+'</p>'+
+                                '<p>'+ vip_desc +'</p>'+
+                            '</div>'+
+                            '<div class="vipTitle">'+ vip_title + '</div>'+
+                        '</div>';
+                    }
+                    $('.vipPage .leftPart .priceList').append(priceDom);
+
+                    // if (data.body.pic) {
+                    //     $('.vipPage').css({
+                    //         "background-image": 'url('+ data.body.pic +')'
+                    //     })
+                    // }
+
+                    // 查询订单状态
+                    if (!isVip) {
+                        hearBeat = setInterval(checkOrder, 5000);
+                    }
+
+                    // 日志上报
+                    param.eventDescribe = 'getPriceSuccess';
+                    logReport('event', '[' + JSON.stringify(param)+ ']');
+                } else {
+                    // 日志上报
+                    param.eventDescribe = 'getPriceError';
+                    logReport('event', '[' + JSON.stringify(param)+ ']');
+                }
+            },
+            error: function(err) {
+                // 日志上报
+                param.eventDescribe = 'getPriceError';
+                logReport('event', '[' + JSON.stringify(param)+ ']');
+            }
+        });
+    }
+
+    // 时间戳转日期
+    function timestampToTime(timestamp) {
+        var date = new Date(timestamp); //时间戳为10位需*1000，时间戳为13位的话不需乘1000
+        Y = date.getFullYear() + '-';
+        M = (date.getMonth()+1 < 10 ? '0'+(date.getMonth()+1) : date.getMonth()+1) + '-';
+        D = date.getDate() + ' ';
+        h = date.getHours() + ':';
+        m = date.getMinutes();
+        s = date.getSeconds();
+        return Y+M+D+h+m;
+        // return Y+M+D;
+    }
+
+    function formatTime(time, format, showSingleNum) {
+        if (!time || typeof time !== 'number') {
+          return '';
+        }
+
+        if (!format) {
+            format = 'yyyy-MM-dd HH:mm:ss';
+        }
+
+        showSingleNum = false;
+
+        const fixZero = function(num) {
+          if (num < 10 && !showSingleNum) {
+            return '0' + num;
+          }
+
+          return num;
+        };
+
+        const timeObj = new Date(time);
+
+        const fullYear = timeObj.getFullYear();
+        const year = fullYear.toString().slice(2);
+        const month = timeObj.getMonth() + 1;
+        const day = timeObj.getDate();
+        const hour = timeObj.getHours();
+        const minute = timeObj.getMinutes();
+        const second = timeObj.getSeconds();
+        const milliseconds = timeObj.getMilliseconds();
+
+        return format
+          .replace(/yyyy/g, fullYear)
+          .replace(/yy/g, year)
+          .replace(/MM/g, fixZero(month))
+          .replace(/dd/g, fixZero(day))
+          .replace(/HH/g, fixZero(hour))
+          .replace(/mm/g, fixZero(minute))
+          .replace(/ss/g, fixZero(second))
+          .replace(/ms/g, milliseconds);
+    }
+
+    // 数组对象排序
+    function compare(prop) {
+        return function (obj1, obj2) {
+            var val1 = obj1[prop];
+            var val2 = obj2[prop];
+            if (!isNaN(Number(val1)) && !isNaN(Number(val2))) {
+                val1 = Number(val1);
+                val2 = Number(val2);
+            }
+            if (val1 > val2) {
+                return -1;
+            } else if (val1 < val2) {
+                return 1;
+            } else {
+                return 0;
+            }
+        }
+    }
+
+    // 向终端报告状态
+    function getExceptionMessage(message) {
+        console.log(message);
+        // 终端方法已删除，通过console.log可以查看
+    }
+
+    // 通知终端隐藏loading
+    function hideLoading() {
+        if (pageType == null) {
+            window.rnUtils.pageLoadFinished();
+        }
+    }
+</script>
+</body>
+</html>

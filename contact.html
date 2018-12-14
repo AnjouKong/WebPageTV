@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="Content-type" content="text/html; charset=utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width,user-scalable=yes,minimum-scale=1,maximum-scale=1">
+    <title>联系我们</title>
+    <link rel="stylesheet" type="text/css" href="css/main.css" media="all">
+    <script type="text/javascript" src="js/jquery-1.11.3.min.js"></script>
+    <script type="text/javascript" src="js/Cursor.js"></script>
+</head>
+<body>
+<div class="contactPage section">
+	<div class="leftPart"><img src="images/imgLeft.png" height="100%" /></div>
+	<div class="rightPart">
+		<h1>联系方式：</h1>
+		<div class="wechat">
+			<img src="images/contact_wechat.png" width="100px" />
+			<div class="text">
+				<p>官方微信</p>
+				<p>联合视界UTV</p>
+			</div>
+		</div>
+		<img src="images/code.png" width="428px" height="428px" />
+	</div>
+</div>
+
+<script>
+	$(function(){
+	    //1920*1080,1366*768,1280*720,960*540,640*360
+	    //2560*1440,3840*2160,
+	    var ww = $(window).width();
+	    var wh = $(window).height()
+	    var rate = ww/1920;
+	    var height = ww>1920 ? wh : 1080;
+        if (ww/wh == 1.6) {
+            // 适配1280*800
+            height = 1200;
+
+            $('.contactPage').css({
+                "padding-top": "235px",
+            });
+        }
+	    $('.section').css({
+	        "transform":"scale("+rate+")",
+	        "transform-origin": "0 0",
+	        "height": height + "px",
+	    });
+    });
+</script>
+</body>
+</html>
